@@ -1,80 +1,122 @@
 """
-Main dice roller module for handling multiple dice and game simulations.
+Main dice roller module with game-specific rolling functions
 """
 
-from dice import Dice
+from dice import Dice, D4, D6, D8, D10, D12, D20, D100
+import random
 
 class DiceRoller:
-    """Handles rolling multiple dice and calculating results."""
+    """Handles dice rolling operations for various games"""
     
-    def __init__(self):
-        """Initialize an empty dice collection."""
-        self.dice_collection = {}
-    
-    def add_dice(self, dice_type, count=1):
+    @staticmethod
+    def roll_multiple(dice_list):
         """
-        Add dice to the collection.
+        Roll multiple dice and return individual results and total
         
         Args:
-            dice_type (int or str): Number of sides or dice notation (e.g., 'D6', 'D20')
-            count (int): Number of dice to add (default: 1)
-        """
-        if isinstance(dice_type, str) and dice_type.upper().startswith('D'):
-            sides = int(dice_type[1:])
-        else:
-            sides = int(dice_type)
-        
-        dice_key = f"D{sides}"
-        if dice_key not in self.dice_collection:
-            self.dice_collection[dice_key] = []
-        
-        for _ in range(count):
-            self.dice_collection[dice_key].append(Dice(sides))
-    
-    def roll_all(self):
-        """
-        Roll all dice in the collection.
-        
-        Returns:
-            dict: Results organized by dice type with individual rolls and totals
-        """
-        results = {}
-        
-        for dice_type, dice_list in self.dice_collection.items():
-            rolls = [dice.roll() for dice in dice_list]
-            results[dice_type] = {
-                'rolls': rolls,
-                'total': sum(rolls),
-                'count': len(rolls)
-            }
-        
-        return results
-    
-    def roll_single(self, dice_type, count=1):
-        """
-        Roll specific dice type without adding to collection.
-        
-        Args:
-            dice_type (int or str): Dice type to roll
-            count (int): Number of dice to roll
+            dice_list (list): List of Dice objects or integers (sides)
             
         Returns:
-            dict: Roll results
+            dict: Dictionary with individual rolls and total
         """
-        if isinstance(dice_type, str) and dice_type.upper().startswith('D'):
-            sides = int(dice_type[1:])
-        else:
-            sides = int(dice_type)
+        results = []
+        total = 0
         
-        rolls = [Dice(sides).roll() for _ in range(count)]
+        for dice in dice_list:
+            if isinstance(dice, Dice):
+                roll = dice.roll()
+            elif isinstance(dice, int):
+                roll = random.randint(1, dice)
+            else:
+                raise ValueError("Dice must be Dice object or integer")
+                
+            results.append(roll)
+            total += roll
+        
+        return {
+            'rolls': results,
+            'total': total,
+            'dice_used': [str(dice) if isinstance(dice, Dice) else f"D{dice}" 
+                         for dice in dice_list]
+        }
+    
+    @staticmethod
+    def roll_dnd_ability_score():
+        """
+        Roll 4d6 and drop the lowest (D&D ability score method)
+        
+        Returns:
+            dict: Roll results including dropped die
+        """
+        rolls = [D6.roll() for _ in range(4)]
+        sorted_rolls = sorted(rolls, reverse=True)
+        total = sum(sorted_rolls[:3])
         
         return {
             'rolls': rolls,
-            'total': sum(rolls),
-            'count': count,
-            'dice_type': f"D{sides}"
+            'kept_rolls': sorted_rolls[:3],
+            'dropped_roll': sorted_rolls[3],
+            'total': total
         }
     
-    def clear_dice(self):
-        """Clear all dice from the collection."""
-        self.dice_collection.clear()
+    @staticmethod
+    def roll_fudge_dice(count=4):
+        """
+        Roll Fudge/FATE dice (-1, 0, +1 results)
+        
+        Args:
+            count (int): Number of Fudge dice to roll
+            
+        Returns:
+            dict: Roll results with total
+        """
+        results = []
+        for _ in range(count):
+            roll = random.randint(1, 3)  # 1=-1, 2=0, 3=+1
+            if roll == 1:
+                results.append(-1)
+            elif roll == 2:
+                results.append(0)
+            else:
+                results.append(1)
+        
+        return {
+            'rolls': results,
+            'total': sum(results)
+        }
+    
+    @staticmethod
+    def roll_advantage():
+        """
+        Roll with advantage (D&D 5e) - roll 2d20, take higher
+        
+        Returns:
+            dict: Both rolls and the result used
+        """
+        roll1 = D20.roll()
+        roll2 = D20.roll()
+        result = max(roll1, roll2)
+        
+        return {
+            'rolls': [roll1, roll2],
+            'result': result,
+            'type': 'advantage'
+        }
+    
+    @staticmethod
+    def roll_disadvantage():
+        """
+        Roll with disadvantage (D&D 5e) - roll 2d20, take lower
+        
+        Returns:
+            dict: Both rolls and the result used
+        """
+        roll1 = D20.roll()
+        roll2 = D20.roll()
+        result = min(roll1, roll2)
+        
+        return {
+            'rolls': [roll1, roll2],
+            'result': result,
+            'type': 'disadvantage'
+        }
