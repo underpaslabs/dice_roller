@@ -1,123 +1,115 @@
 """
-Game-specific dice rolling simulations for common tabletop games.
+Game-specific simulation functions
 """
 
 from dice_roller import DiceRoller
+from dice import D6, D20
 
 class GameSimulations:
-    """Pre-configured dice simulations for various games."""
+    """Simulate common game scenarios"""
     
     @staticmethod
-    def dnd_ability_roll():
+    def simulate_dnd_attack(attacker_bonus=5, target_ac=15, advantage=False, disadvantage=False):
         """
-        Simulate D&D ability score roll (4d6 drop lowest).
-        
-        Returns:
-            dict: Roll results with dropped value
-        """
-        roller = DiceRoller()
-        roller.add_dice(6, 4)
-        result = roller.roll_all()['D6']
-        
-        # Drop the lowest roll for D&D ability scores
-        rolls = result['rolls']
-        min_roll = min(rolls)
-        final_rolls = [r for r in rolls if r != min_roll] or [min_roll]
-        
-        return {
-            'all_rolls': rolls,
-            'final_rolls': final_rolls,
-            'dropped': min_roll,
-            'total': sum(final_rolls)
-        }
-    
-    @staticmethod
-    def dnd_attack_roll(advantage=False, disadvantage=False):
-        """
-        Simulate D&D attack roll (d20 with optional advantage/disadvantage).
+        Simulate a D&D attack roll
         
         Args:
+            attacker_bonus (int): Attacker's attack bonus
+            target_ac (int): Target's Armor Class
             advantage (bool): Roll with advantage
             disadvantage (bool): Roll with disadvantage
             
         Returns:
-            dict: Attack roll results
+            dict: Attack result details
         """
-        roller = DiceRoller()
-        
         if advantage and disadvantage:
             # Cancel each other out
-            roller.add_dice(20, 1)
+            attack_roll = D20.roll()
         elif advantage:
-            roller.add_dice(20, 2)
+            result = DiceRoller.roll_advantage()
+            attack_roll = result['result']
         elif disadvantage:
-            roller.add_dice(20, 2)
+            result = DiceRoller.roll_disadvantage()
+            attack_roll = result['result']
         else:
-            roller.add_dice(20, 1)
+            attack_roll = D20.roll()
         
-        result = roller.roll_all()['D20']
-        rolls = result['rolls']
+        total_attack = attack_roll + attacker_bonus
+        hit = total_attack >= target_ac
+        critical_hit = attack_roll == 20
+        critical_miss = attack_roll == 1
         
-        if len(rolls) == 2:
-            if advantage:
-                final_roll = max(rolls)
-            else:  # disadvantage
-                final_roll = min(rolls)
-        else:
-            final_roll = rolls[0]
+        return {
+            'attack_roll': attack_roll,
+            'bonus': attacker_bonus,
+            'total_attack': total_attack,
+            'target_ac': target_ac,
+            'hit': hit,
+            'critical_hit': critical_hit,
+            'critical_miss': critical_miss
+        }
+    
+    @staticmethod
+    def simulate_yahtzee_roll(dice_count=5):
+        """
+        Simulate a Yahtzee dice roll
+        
+        Args:
+            dice_count (int): Number of dice to roll
+            
+        Returns:
+            dict: Roll results with analysis
+        """
+        rolls = [D6.roll() for _ in range(dice_count)]
+        
+        # Analyze the roll
+        counts = {}
+        for roll in rolls:
+            counts[roll] = counts.get(roll, 0) + 1
+        
+        max_count = max(counts.values())
+        is_yahtzee = max_count == dice_count  # All dice same
+        is_full_house = sorted(counts.values()) == [2, 3] and len(counts) == 2
+        is_large_straight = sorted(rolls) in [[1,2,3,4,5], [2,3,4,5,6]]
+        is_small_straight = any(
+            all(num in rolls for num in seq) 
+            for seq in [[1,2,3,4], [2,3,4,5], [3,4,5,6]]
+        )
         
         return {
             'rolls': rolls,
-            'final_roll': final_roll,
-            'advantage': advantage,
-            'disadvantage': disadvantage
+            'total': sum(rolls),
+            'counts': counts,
+            'is_yahtzee': is_yahtzee,
+            'is_full_house': is_full_house,
+            'is_large_straight': is_large_straight,
+            'is_small_straight': is_small_straight
         }
     
     @staticmethod
-    def shadowrun_pool(dice_pool):
+    def simulate_shadowrun_test(dice_pool=6, threshold=4):
         """
-        Simulate Shadowrun dice pool (count successes on d6, 5-6 = success).
+        Simulate a Shadowrun dice pool test
         
         Args:
-            dice_pool (int): Number of d6 to roll
+            dice_pool (int): Number of D6 to roll
+            threshold (int): Target number for successes (5 or 6)
             
         Returns:
-            dict: Success count and individual rolls
+            dict: Test results
         """
-        roller = DiceRoller()
-        roller.add_dice(6, dice_pool)
-        result = roller.roll_all()['D6']
+        rolls = [D6.roll() for _ in range(dice_pool)]
+        successes = sum(1 for roll in rolls if roll >= 5)
+        glitch = rolls.count(1) > len(rolls) / 2  # More than half are 1s
+        critical_glitch = glitch and successes == 0
         
-        successes = sum(1 for roll in result['rolls'] if roll >= 5)
+        passed = successes >= threshold
         
         return {
-            'rolls': result['rolls'],
+            'rolls': rolls,
             'successes': successes,
-            'dice_pool': dice_pool,
-            'success_threshold': 5
-        }
-    
-    @staticmethod
-    def warhammer_roll(dice_count, target_number):
-        """
-        Simulate Warhammer-style roll (count successes above target number).
-        
-        Args:
-            dice_count (int): Number of d6 to roll
-            target_number (int): Minimum number for success
-            
-        Returns:
-            dict: Success results
-        """
-        roller = DiceRoller()
-        roller.add_dice(6, dice_count)
-        result = roller.roll_all()['D6']
-        
-        successes = sum(1 for roll in result['rolls'] if roll >= target_number)
-        
-        return {
-            'rolls': result['rolls'],
-            'successes': successes,
-            'target_number': target_number,
-            'dice_count': dice_count
+            'threshold': threshold,
+            'passed': passed,
+            'glitch': glitch,
+            'critical_glitch': critical_glitch
         }
