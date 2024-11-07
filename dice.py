@@ -1,13 +1,15 @@
 """
-Dice module containing Dice class and dice type definitions
+Dice module containing Dice class for simulating dice rolls.
 """
 
+import random
+
 class Dice:
-    """Represents a dice with a specific number of sides"""
+    """A class to represent a dice with configurable sides."""
     
     def __init__(self, sides=6):
         """
-        Initialize a dice
+        Initialize a dice with specified number of sides.
         
         Args:
             sides (int): Number of sides on the dice (default: 6)
@@ -18,22 +20,15 @@ class Dice:
     
     def roll(self):
         """
-        Roll the dice once
+        Roll the dice and return a random value.
         
         Returns:
             int: Random number between 1 and number of sides
         """
-        import random
         return random.randint(1, self.sides)
     
     def __str__(self):
         return f"D{self.sides}"
-
-# Common dice types
-D4 = Dice(4)
-D6 = Dice(6)
-D8 = Dice(8)
-D10 = Dice(10)
-D12 = Dice(12)
-D20 = Dice(20)
-D100 = Dice(100)
+    
+    def __repr__(self):
+        return f"Dice(sides={self.sides})"
