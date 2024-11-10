@@ -1,122 +1,88 @@
 """
-Main dice roller module with game-specific rolling functions
+Main dice roller module for simulating multiple dice rolls.
 """
 
-from dice import Dice, D4, D6, D8, D10, D12, D20, D100
-import random
+from dice import Dice
 
 class DiceRoller:
-    """Handles dice rolling operations for various games"""
+    """A class to handle rolling multiple dice of various types."""
     
-    @staticmethod
-    def roll_multiple(dice_list):
-        """
-        Roll multiple dice and return individual results and total
-        
-        Args:
-            dice_list (list): List of Dice objects or integers (sides)
-            
-        Returns:
-            dict: Dictionary with individual rolls and total
-        """
-        results = []
-        total = 0
-        
-        for dice in dice_list:
-            if isinstance(dice, Dice):
-                roll = dice.roll()
-            elif isinstance(dice, int):
-                roll = random.randint(1, dice)
-            else:
-                raise ValueError("Dice must be Dice object or integer")
-                
-            results.append(roll)
-            total += roll
-        
-        return {
-            'rolls': results,
-            'total': total,
-            'dice_used': [str(dice) if isinstance(dice, Dice) else f"D{dice}" 
-                         for dice in dice_list]
+    def __init__(self):
+        """Initialize the dice roller with common dice types."""
+        self.dice_types = {
+            'd4': Dice(4),
+            'd6': Dice(6),
+            'd8': Dice(8),
+            'd10': Dice(10),
+            'd12': Dice(12),
+            'd20': Dice(20),
+            'd100': Dice(100)
         }
     
-    @staticmethod
-    def roll_dnd_ability_score():
+    def roll_single(self, dice_type='d6'):
         """
-        Roll 4d6 and drop the lowest (D&D ability score method)
-        
-        Returns:
-            dict: Roll results including dropped die
-        """
-        rolls = [D6.roll() for _ in range(4)]
-        sorted_rolls = sorted(rolls, reverse=True)
-        total = sum(sorted_rolls[:3])
-        
-        return {
-            'rolls': rolls,
-            'kept_rolls': sorted_rolls[:3],
-            'dropped_roll': sorted_rolls[3],
-            'total': total
-        }
-    
-    @staticmethod
-    def roll_fudge_dice(count=4):
-        """
-        Roll Fudge/FATE dice (-1, 0, +1 results)
+        Roll a single dice of specified type.
         
         Args:
-            count (int): Number of Fudge dice to roll
+            dice_type (str): Type of dice (e.g., 'd6', 'd20')
             
         Returns:
-            dict: Roll results with total
+            tuple: (dice_type, result)
         """
+        if dice_type not in self.dice_types:
+            raise ValueError(f"Unknown dice type: {dice_type}")
+        
+        dice = self.dice_types[dice_type]
+        result = dice.roll()
+        return dice_type, result
+    
+    def roll_multiple(self, dice_type='d6', count=1):
+        """
+        Roll multiple dice of the same type.
+        
+        Args:
+            dice_type (str): Type of dice to roll
+            count (int): Number of dice to roll
+            
+        Returns:
+            dict: Dictionary with results and total
+        """
+        if count < 1:
+            raise ValueError("Must roll at least 1 dice")
+        
         results = []
         for _ in range(count):
-            roll = random.randint(1, 3)  # 1=-1, 2=0, 3=+1
-            if roll == 1:
-                results.append(-1)
-            elif roll == 2:
-                results.append(0)
-            else:
-                results.append(1)
+            _, result = self.roll_single(dice_type)
+            results.append(result)
         
         return {
-            'rolls': results,
-            'total': sum(results)
+            'dice_type': dice_type,
+            'results': results,
+            'total': sum(results),
+            'count': count
         }
     
-    @staticmethod
-    def roll_advantage():
+    def roll_custom_dice(self, sides, count=1):
         """
-        Roll with advantage (D&D 5e) - roll 2d20, take higher
+        Roll custom dice with specified number of sides.
         
+        Args:
+            sides (int): Number of sides for custom dice
+            count (int): Number of dice to roll
+            
         Returns:
-            dict: Both rolls and the result used
+            dict: Dictionary with results and total
         """
-        roll1 = D20.roll()
-        roll2 = D20.roll()
-        result = max(roll1, roll2)
+        custom_dice = Dice(sides)
+        results = [custom_dice.roll() for _ in range(count)]
         
         return {
-            'rolls': [roll1, roll2],
-            'result': result,
-            'type': 'advantage'
+            'dice_type': f'd{sides}',
+            'results': results,
+            'total': sum(results),
+            'count': count
         }
     
-    @staticmethod
-    def roll_disadvantage():
-        """
-        Roll with disadvantage (D&D 5e) - roll 2d20, take lower
-        
-        Returns:
-            dict: Both rolls and the result used
-        """
-        roll1 = D20.roll()
-        roll2 = D20.roll()
-        result = min(roll1, roll2)
-        
-        return {
-            'rolls': [roll1, roll2],
-            'result': result,
-            'type': 'disadvantage'
-        }
+    def get_available_dice(self):
+        """Return list of available dice types."""
+        return list(self.dice_types.keys())
